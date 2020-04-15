@@ -180,6 +180,114 @@ const postNewProduct = (req,res)=>{
 }
 
 
+const postNewImage = (req,res)=>{
+    
+    const upload = fileUpload.single('add-image')
+    upload(req,res,(err)=>{
+        try{
+            let isFailed = false
+            if(err) throw err
+
+            if(req.file.size > 1000000){
+                isFailed = true
+            }
+
+            if(!req.file.mimetype.includes('image')){
+                isFailed = true
+            }
+
+            if(isFailed){
+                fs.unlinkSync(req.file.path)
+                throw{error:true, message : 'file must be image and below 1mb'}
+            }else{
+                let id_product = req.body.id
+                let image_url = convertPath(req.file.path)
+                let data = {
+                    image_url : image_url,
+                    id_product : id_product
+                }
+                let sql = `insert into product_images set ?`
+                db.query(sql, data, (err,result)=>{
+                    try{
+                        if(err) throw err
+                        res.json({
+                            error : false,
+                            message : 'Image successfully added'
+                        })
+                    }catch(err){
+                        res.json({
+                            error : true,
+                            message : err.message
+                        })
+                    }
+                })
+
+
+            }
+
+
+        }catch(err){
+            res.json(err)
+            console.log(err)
+        }
+    })
+    
+
+}
+
+
+const deleteProductById = (req,res)=>{
+    //Delete Product By ID
+    //Delete all API IMAGE
+    //Delete Image BY ID Product Database
+    const id = req.params.id
+    let sql = 'select * from product_images where id_product = ?'
+    db.query(sql, id, (err,result)=>{
+        try{
+            if(err) throw err
+            for(var i = 0 ; i < result.length; i++){
+                fs.unlinkSync(result[i].image_url)
+            }
+
+            let sql = 'delete from product_images where id_product = ?'
+            db.query(sql, id, (err,result)=>{
+                try{
+                    if(err) throw err
+
+                    let sql = 'delete from products where id = ?'
+                    db.query(sql,id,(err,result)=>{
+                        try{
+                            if(err)throw err
+                            res.json({
+                                error : false,
+                                message : 'Delete Product Success'
+                            })
+                        }catch(err){
+                            res.json({
+                                error : true,
+                                message : err.message
+                            })
+                        }
+                    })
+                }catch(err){
+                    res.json({
+                        error : true,
+                        message : err.message
+                    })
+                }
+            })
+        }catch(err){
+            res.json({
+                error : true,
+                message : err.message
+            })
+        }
+    })
+}
+
+
+
+
 const deleteImageById = (req,res)=>{
     //delete url_image di database
     //delete image nya di api
@@ -212,6 +320,10 @@ const deleteImageById = (req,res)=>{
         }
     })
 }
+
+
+
+
 
 
 const editImagebyId = (req,res)=>{
@@ -282,6 +394,57 @@ const editImagebyId = (req,res)=>{
 
 }
 
+// EDIT VERSI MAS FIKRI===================================================================================================================
+
+// const editImageById = (req,res) => {
+//     // edit image_url di database
+//     const upload = fileUpload.single('editImage')
+//     // post image to api
+//     upload(req,res,(err) => {
+//         try{
+//             if(err) throw err
+
+//             // check all the data needed
+//             console.log(req.file)
+//             const newPath = req.file.path
+//             const oldPath = req.body.path
+//             const idImage = req.params.id
+//             console.log(newPath)
+//             console.log(oldPath)
+//             console.log(idImage)
+//             let dataPath = {image_url : newPath}
+//             // delete old image from api
+//             fs.unlinkSync(oldPath)
+
+//             // edit image path at database
+//             let sql = 'update product_images set ? where id = ?'
+//             db.query(sql,[ dataPath , idImage],(err,result) => {
+//                 try{
+//                     if(err) throw err
+//                     res.json({
+//                         error : false,
+//                         message : "Edit Data Success"
+//                     })
+//                 }catch(err){
+//                     console.log(err)
+//                 }
+//             })
+
+
+
+//         }catch(err){
+//             console.log(err)
+//         }
+//     })
+//     // post image ke api
+//     // delete old image from api
+//     // edit image_url di database
+// }
+
+// EDIT VERSI MAS FIKRI=====================================================================================================================
+
+
+
 
 
 
@@ -291,5 +454,7 @@ module.exports = {
     getProductById : getProductById,
     postNewProduct : postNewProduct,
     deleteImageById : deleteImageById,
-    editImagebyId : editImagebyId
+    editImagebyId : editImagebyId,
+    postNewImage : postNewImage,
+    deleteProductById : deleteProductById
 }
